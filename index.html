@@ -227,6 +227,8 @@ function onMateriaChange() {
 
 // ─── Importar cronograma ───────────────────────────────────────
 let cronogramaData = null;
+let diasCronogramaActual = null;   // detalle día por día de la semana cargada actualmente
+let semanaCronogramaActual = null; // número de semana al que corresponde diasCronogramaActual
 
 async function extraerCronograma() {
   const texto = document.getElementById('cronograma-texto').value.trim();
@@ -263,10 +265,14 @@ function renderSemanas(data) {
   const cont = document.getElementById('cronograma-semanas');
   cont.innerHTML = '';
   data.semanas.forEach((s, i) => {
+    const dias = s.dias || [];
+    const temasUnicos = [...new Set(dias.map(d => d.tema).filter(Boolean))];
+    const etiqueta = temasUnicos.slice(0, 2).join(' / ') || '(sin tema)';
     const pill = document.createElement('span');
     pill.className = 'pill';
     pill.style.cursor = 'pointer';
-    pill.textContent = `Semana ${s.semana}: ${s.tema}`;
+    pill.textContent = `Semana ${s.semana} (${dias.length} días): ${etiqueta}`;
+    pill.title = dias.map(d => `${d.dia}: ${d.tema}`).join('\n');
     pill.onclick = () => usarSemana(i);
     cont.appendChild(pill);
   });
@@ -275,6 +281,7 @@ function renderSemanas(data) {
 function usarSemana(i) {
   if (!cronogramaData) return;
   const s = cronogramaData.semanas[i];
+  const dias = s.dias || [];
 
   if (cronogramaData.unidad) document.getElementById('unidad').value = cronogramaData.unidad;
   if (cronogramaData.materia && Array.from(document.getElementById('materia').options).some(o => o.value === cronogramaData.materia)) {
@@ -282,9 +289,25 @@ function usarSemana(i) {
   }
   onMateriaChange();
   document.getElementById('semana').value = s.semana;
-  document.getElementById('tema').value = s.tema;
-  document.getElementById('destrezas').value = s.destrezas;
+
+  // Tema y destrezas: resumen agregado de los días, solo para que el formulario no quede vacío —
+  // el detalle real día por día se envía aparte (ver generarPlan).
+  const temasUnicos     = [...new Set(dias.map(d => d.tema).filter(Boolean))];
+  const destrezasUnicas = [...new Set(dias.flatMap(d => (d.destrezas || '').split(',').map(x => x.trim())).filter(Boolean))];
+  document.getElementById('tema').value      = temasUnicos.join(' / ');
+  document.getElementById('destrezas').value = destrezasUnicas.join(', ');
   document.getElementById('continuidad').value = s.continuidad || '';
+
+  // Marcar en los checkboxes exactamente los días que trae esta semana del cronograma
+  const diasSemana = dias.map(d => (d.dia || '').toLowerCase());
+  document.querySelectorAll('#dias-pills input[type=checkbox]').forEach(cb => {
+    cb.checked = diasSemana.includes(cb.value);
+    cb.dispatchEvent(new Event('change'));
+  });
+
+  // Guardar el detalle día por día para usarlo al generar el plan
+  diasCronogramaActual = dias;
+  semanaCronogramaActual = s.semana;
 
   document.querySelectorAll('#cronograma-semanas .pill').forEach(p => p.classList.remove('checked'));
   document.querySelectorAll('#cronograma-semanas .pill')[i].classList.add('checked');
@@ -391,10 +414,23 @@ async function generarPlan() {
   const integracion = materia === 'Adquisición de la Lengua' ? 'Estudios Sociales (integración explícita y estructural)' : materia === 'Matemática' ? 'Estudios Sociales' : 'Matemática, Estudios Sociales';
   const cont_txt = continuidad ? '\n- Lo cubierto la semana pasada: ' + continuidad + '\n\nIMPORTANTE: Continúa desde donde se dejó. No repitas lo ya cubierto.' : '';
 
+  // Si esta semana viene de un cronograma importado (con detalle día por día), se lo pasamos
+  // a la IA como contenido ya definido — no debe inventar otra actividad para esos días.
+  let detalleDiario = '';
+  if (diasCronogramaActual && diasCronogramaActual.length && String(semanaCronogramaActual) === String(semana)) {
+    const diasUsados = diasCronogramaActual.filter(d => dias.includes((d.dia || '').toLowerCase()));
+    if (diasUsados.length) {
+      detalleDiario = '\n\nCONTENIDO YA DEFINIDO PARA CADA DÍA (viene del cronograma de la unidad —úsalo como base real de cada día, no inventes otro tema, actividad o ejemplo; solo redacta cada sección en el estilo de Héctor a partir de esto):\n' +
+        diasUsados.map(d =>
+          `${(d.dia||'').toUpperCase()}: Tema: ${d.tema||''} | Destrezas: ${d.destrezas||''} | Actividad: ${d.actividad||''} | Ejemplo: ${d.ejemplo||''} | Evaluación/evidencia: ${d.evaluacion||''} | Andamiaje: ${d.andamiaje||''}`
+        ).join('\n');
+    }
+  }
+
   try {
     const resp = await fetch('/api/generar', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: SYSTEMS[materia] + BASE_SYSTEM, prompt: 'Genera plan semanal:\n- Semana: ' + semana + ' | Fecha: ' + (fecha||'por definir') + ' | Materia: ' + materia + '\n- Tema: ' + tema + ' | Unidad: ' + (unidad||'por definir') + '\n- Destrezas: ' + destrezas + '\n- Días: ' + dias.join(', ') + '\n- Temas transversales: ' + transversales.join(' / ') + '\n- Temas generadores: ' + generadores.join(' / ') + '\n- Integración con: ' + integracion + cont_txt })
+      body: JSON.stringify({ system: SYSTEMS[materia] + BASE_SYSTEM, prompt: 'Genera plan semanal:\n- Semana: ' + semana + ' | Fecha: ' + (fecha||'por definir') + ' | Materia: ' + materia + '\n- Tema: ' + tema + ' | Unidad: ' + (unidad||'por definir') + '\n- Destrezas: ' + destrezas + '\n- Días: ' + dias.join(', ') + '\n- Temas transversales: ' + transversales.join(' / ') + '\n- Temas generadores: ' + generadores.join(' / ') + '\n- Integración con: ' + integracion + cont_txt + detalleDiario })
     });
     if (!resp.ok) throw new Error(`Error ${resp.status}`);
     const data = await resp.json();

@@ -10,21 +10,30 @@ export default async function handler(req, res) {
 
   const system = `Eres un asistente que ayuda a Héctor Lozada Lacén, maestro de tercer grado, a preparar cronogramas de enseñanza para su planificador semanal.
 
-Vas a recibir un cronograma o mapa curricular ya redactado (puede venir como texto plano, una tabla copiada, o una lista con varias sesiones/días por semana). Tu tarea es dividirlo en semanas de enseñanza y, para cada semana, extraer:
-- "tema": un tema breve y concreto para esa semana (máximo 12 palabras), pensado para el campo "Tema de la semana" de un formulario de planificación.
-- "destrezas": lista corta de destrezas o contenido clave de esa semana, separadas por comas, pensada para el campo "Destrezas o contenido clave".
-- "continuidad": un resumen de 1-2 oraciones de lo que se cubrió la semana ANTERIOR, para dar continuidad al plan siguiente. Déjalo vacío ("") en la primera semana.
+Vas a recibir un cronograma o mapa curricular ya redactado, con detalle DÍA POR DÍA (puede traer etiquetas como "Semana 1 - Día 1", "S1-D1", tablas copiadas, etc.). Lo que más le importa a Héctor es justamente ese detalle diario — NO lo resumas ni lo colapses por semana. Tu tarea es:
 
-Si el cronograma trae varias sesiones o días por semana, combínalas en un solo resumen por semana — no generes una entrada por día ni por sesión individual.
+1. Agrupar los días en semanas de enseñanza (normalmente 5 días de clase por semana).
+2. Mapear la secuencia de días de cada semana a los días reales lunes a viernes, en orden (el primer día de la semana = lunes, el segundo = martes, y así sucesivamente). Si una semana trae menos de 5 días, incluye solo los que traiga.
+3. Para CADA día individual, extraer:
+   - "dia": lunes/martes/miércoles/jueves/viernes según su posición en la semana.
+   - "tema": el tema o destreza específica de ESE día (no el de toda la semana).
+   - "destrezas": destrezas o contenido clave de ese día, separadas por comas.
+   - "actividad": la actividad sugerida de ese día, tal como aparece en el cronograma (no la inventes ni la generalices).
+   - "ejemplo": el ejemplo concreto asociado a esa actividad, si el cronograma lo trae.
+   - "evaluacion": la evaluación o evidencia de ese día, si aparece.
+   - "andamiaje": el andamiaje o apoyo sugerido de ese día, si aparece.
+4. Para cada semana, agrega también "continuidad": un resumen de 1-2 oraciones de lo que se cubrió la semana ANTERIOR (vacío "" en la primera semana).
 
 También identifica, si aparecen en el texto:
 - "unidad": el nombre de la unidad curricular.
 - "materia": una de "Adquisición de la Lengua", "Matemática" o "Ciencias" (si no es clara por el contenido, usa "Matemática").
 
-Devuelve SOLO JSON sin texto adicional, con este formato exacto:
-{"unidad":"","materia":"","semanas":[{"semana":1,"tema":"","destrezas":"","continuidad":""}]}`;
+No omitas días ni los combines entre sí — cada día del cronograma debe tener su propia entrada en "dias".
 
-  const prompt = `Extrae las semanas del siguiente cronograma y devuelve el JSON pedido:\n\n${cronograma}`;
+Devuelve SOLO JSON sin texto adicional, con este formato exacto:
+{"unidad":"","materia":"","semanas":[{"semana":1,"continuidad":"","dias":[{"dia":"lunes","tema":"","destrezas":"","actividad":"","ejemplo":"","evaluacion":"","andamiaje":""}]}]}`;
+
+  const prompt = `Extrae las semanas y los días del siguiente cronograma y devuelve el JSON pedido. Recuerda: el detalle día por día es lo importante, no lo resumas:\n\n${cronograma}`;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -36,7 +45,7 @@ Devuelve SOLO JSON sin texto adicional, con este formato exacto:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-5',
-        max_tokens: 4000,
+        max_tokens: 8000,
         system,
         messages: [{ role: 'user', content: prompt }]
       })

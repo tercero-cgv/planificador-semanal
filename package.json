@@ -1,0 +1,8 @@
+{
+  "name": "planificador-semanal",
+  "version": "1.0.0",
+  "description": "Agente de planificación semanal — Héctor Lozada Lacén",
+  "dependencies": {
+    "docx": "^9.6.1"
+  }
+}

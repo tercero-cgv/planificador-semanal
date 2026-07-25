@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "api/generar.js", "use": "@vercel/node" },
+    { "src": "api/generar-word.js", "use": "@vercel/node" },
+    { "src": "api/generar-ee.js", "use": "@vercel/node" },
+    { "src": "api/generar-word-ee.js", "use": "@vercel/node" },
+    { "src": "api/extraer-cronograma.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/generar-word-ee", "dest": "/api/generar-word-ee.js" },
+    { "src": "/api/generar-ee", "dest": "/api/generar-ee.js" },
+    { "src": "/api/generar-word", "dest": "/api/generar-word.js" },
+    { "src": "/api/generar", "dest": "/api/generar.js" },
+    { "src": "/api/extraer-cronograma", "dest": "/api/extraer-cronograma.js" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

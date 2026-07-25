@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Planificación Semanal — Héctor Lozada Lacén</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f4f0; --surface: #ffffff; --border: #e2e0d8;
+  --text: #1a1a18; --text-muted: #6b6a65;
+  --accent: #1a4fa8; --accent-light: #eef2fb; --accent-border: #b8c9ee;
+  --green: #16632e; --green-light: #eaf4ee; --green-border: #9dd0b0;
+  --orange: #b45309; --orange-light: #fef3c7; --orange-border: #fcd34d;
+  --radius: 10px; --radius-sm: 6px;
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.6; min-height: 100vh; }
+.page { max-width: 780px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+header { margin-bottom: 1.5rem; }
+.header-inner { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+h1 { font-size: 22px; font-weight: 600; }
+header p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.badge { font-size: 11px; font-weight: 600; background: var(--accent); color: white; padding: 3px 9px; border-radius: 20px; white-space: nowrap; margin-top: 4px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 1rem; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field.full { grid-column: 1 / -1; }
+label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+input, select, textarea { width: 100%; padding: 8px 10px; font-size: 14px; font-family: inherit; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; transition: border-color 0.15s; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+textarea { resize: vertical; min-height: 64px; }
+.note { font-size: 12px; color: var(--accent); background: var(--accent-light); border: 1px solid var(--accent-border); border-radius: var(--radius-sm); padding: 6px 10px; display: none; margin-top: 2px; }
+.divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+.pills { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+.pill { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; cursor: pointer; transition: all 0.15s; user-select: none; }
+.pill input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: var(--accent); }
+.pill.checked { background: var(--accent-light); border-color: var(--accent-border); color: var(--accent); }
+.pill.day.checked { background: var(--green-light); border-color: var(--green-border); color: var(--green); }
+.btn-primary { display: block; width: 100%; margin-top: 1.25rem; padding: 11px; font-size: 15px; font-weight: 600; background: var(--accent); color: white; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: opacity 0.15s; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-secondary { display: block; width: 100%; margin-top: 10px; padding: 11px; font-size: 15px; font-weight: 600; background: var(--surface); color: var(--accent); border: 2px solid var(--accent); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.15s; }
+.btn-secondary:hover { background: var(--accent-light); }
+.btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
+.output-card { padding: 0; overflow: hidden; }
+.tabs { display: flex; border-bottom: 1px solid var(--border); }
+.tab { flex: 1; padding: 11px; font-size: 13px; font-weight: 500; text-align: center; cursor: pointer; color: var(--text-muted); background: var(--bg); border: none; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.tab.active { color: var(--accent); background: var(--surface); border-bottom-color: var(--accent); }
+.tab-content { padding: 1.5rem; }
+.tab-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 1rem; }
+.status-msg { font-size: 13px; color: var(--text-muted); margin-top: 10px; min-height: 20px; }
+.status-msg.error { color: #c0392b; }
+.loading { display: flex; gap: 6px; align-items: center; justify-content: center; padding: 3rem; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-muted); animation: bounce 1.2s infinite; }
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:scale(0.6);opacity:0.4}40%{transform:scale(1);opacity:1}}
+.plan-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid var(--border); }
+.meta-tag { font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 3px 9px; color: var(--text-muted); }
+.day-block { margin-bottom: 1.75rem; padding-bottom: 1.75rem; border-bottom: 1px solid var(--border); }
+.day-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.day-title { font-size: 14px; font-weight: 600; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 12px; margin-bottom: 12px; display: inline-block; }
+.sec { margin-bottom: 10px; }
+.sec-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 3px; }
+.sec-text { font-size: 13.5px; color: var(--text); line-height: 1.65; white-space: pre-wrap; }
+.ee-banner { background: var(--orange-light); border: 1px solid var(--orange-border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: none; }
+.ee-banner h3 { font-size: 14px; font-weight: 600; color: var(--orange); margin-bottom: 4px; }
+.ee-banner p { font-size: 13px; color: var(--text-muted); }
+.ee-status { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.ee-chip { font-size: 12px; padding: 3px 10px; border-radius: 20px; border: 1px solid; }
+.ee-chip.ready { background: var(--green-light); border-color: var(--green-border); color: var(--green); }
+.ee-chip.pending { background: var(--bg); border-color: var(--border); color: var(--text-muted); }
+@media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } .field.full { grid-column: 1; } .header-inner { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>Planificación Semanal</h1>
+        <p>Héctor Lozada Lacén · Tercer grado · Celso González Vaillant · Loíza, PR</p>
+      </div>
+      <span class="badge">DE-PR</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- Banner EE -->
+    <div class="ee-banner" id="ee-banner">
+      <h3>📋 Hoja de Coordinación EE</h3>
+      <p>Genera ADL y Matemática para habilitar la Hoja de Coordinación EE automáticamente.</p>
+      <div class="ee-status">
+        <span class="ee-chip pending" id="chip-adl">⏳ ADL pendiente</span>
+        <span class="ee-chip pending" id="chip-mate">⏳ Matemática pendiente</span>
+      </div>
+    </div>
+
+    <!-- Importar cronograma -->
+    <section class="card" id="import-section">
+      <h2 style="font-size:16px;font-weight:600;margin-bottom:4px;">📥 Importar cronograma</h2>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;">Pega aquí el cronograma completo de la unidad. Lo voy a dividir en semanas — haz clic en una para cargarla al formulario de abajo.</p>
+      <div class="field">
+        <textarea id="cronograma-texto" style="min-height:140px;" placeholder="Pega aquí el texto del cronograma (temas, semanas, destrezas)..."></textarea>
+      </div>
+      <button class="btn-secondary" id="btn-extraer" onclick="extraerCronograma()">✦ Extraer semanas</button>
+      <div id="cronograma-status" class="status-msg"></div>
+      <div id="cronograma-semanas" class="pills" style="margin-top:12px;"></div>
+    </section>
+
+    <!-- Formulario -->
+    <section class="card" id="form-section">
+      <div class="form-grid">
+        <div class="field">
+          <label>Materia</label>
+          <select id="materia" onchange="onMateriaChange()">
+            <option value="Adquisición de la Lengua">Adquisición de la Lengua</option>
+            <option value="Matemática">Matemática</option>
+            <option value="Ciencias">Ciencias</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Semana #</label>
+          <input type="number" id="semana" value="1" min="1" max="40"/>
+        </div>
+        <div class="field">
+          <label>Fecha</label>
+          <input type="text" id="fecha" placeholder="ej. 1 al 5 de septiembre de 2025"/>
+        </div>
+        <div class="field">
+          <label>Unidad</label>
+          <input type="text" id="unidad" placeholder="ej. Unidad 1: Entendiendo los números"/>
+        </div>
+        <div class="field full">
+          <label>Tema de la semana</label>
+          <input type="text" id="tema" placeholder="ej. Fracciones de un entero"/>
+          <div class="note" id="note-adl">📌 ADL: incluye el componente de Estudios Sociales si aplica al tema.</div>
+        </div>
+        <div class="field full">
+          <label>Destrezas o contenido clave</label>
+          <textarea id="destrezas" placeholder="ej. numerador, denominador, fracciones de un entero, representación gráfica"></textarea>
+        </div>
+        <div class="field full">
+          <label>¿Qué cubriste la semana pasada? <span style="font-weight:400;color:var(--text-muted)">(opcional — para continuidad de unidad)</span></label>
+          <textarea id="continuidad" placeholder="ej. Introduje puntos cardinales y el archipiélago de PR. Los estudiantes completaron las partes 1-3 de la autobiografía geográfica." style="min-height:56px;"></textarea>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>Días con clase esta semana</label>
+        <div class="pills" id="dias-pills">
+          <label class="pill day checked"><input type="checkbox" value="lunes" checked/>Lunes</label>
+          <label class="pill day checked"><input type="checkbox" value="martes" checked/>Martes</label>
+          <label class="pill day checked"><input type="checkbox" value="miércoles" checked/>Miércoles</label>
+          <label class="pill day checked"><input type="checkbox" value="jueves" checked/>Jueves</label>
+          <label class="pill day checked"><input type="checkbox" value="viernes" checked/>Viernes</label>
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>Temas transversales</label>
+        <div class="pills" id="transversales-pills">
+          <label class="pill checked"><input type="checkbox" value="Equidad y respeto entre todos los seres humanos" checked/>Equidad y respeto</label>
+          <label class="pill checked"><input type="checkbox" value="Identidad cultural e interculturalidad" checked/>Identidad cultural</label>
+          <label class="pill checked"><input type="checkbox" value="Educación para la concienciación ambiental y ecológica" checked/>Ambiental y ecológica</label>
+          <label class="pill checked"><input type="checkbox" value="Tecnologías de la información y la comunicación" checked/>TIC</label>
+          <label class="pill"><input type="checkbox" value="Promoción de la salud"/>Promoción de la salud</label>
+          <label class="pill"><input type="checkbox" value="Emprendimiento e innovación"/>Emprendimiento e innovación</label>
+        </div>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>Temas generadores</label>
+        <div class="pills" id="generadores-pills">
+          <label class="pill checked"><input type="checkbox" value="Ética en la vida diaria" checked/>Ética en la vida diaria</label>
+          <label class="pill checked"><input type="checkbox" value="Conciencia tecnológica" checked/>Conciencia tecnológica</label>
+          <label class="pill checked"><input type="checkbox" value="Enfoque inclusivo o de atención a la diversidad" checked/>Enfoque inclusivo</label>
+          <label class="pill"><input type="checkbox" value="Sensibilidad por la naturaleza"/>Sensibilidad por la naturaleza</label>
+          <label class="pill"><input type="checkbox" value="Producción, desarrollo del conocimiento, creatividad e investigación"/>Producción y creatividad</label>
+        </div>
+      </div>
+      <button class="btn-primary" id="btn-gen" onclick="generarPlan()">✦ Generar plan semanal</button>
+    </section>
+
+    <!-- Output -->
+    <section class="card output-card" id="output-section" style="display:none;">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('plan', this)">Plan generado</button>
+        <button class="tab" onclick="switchTab('word', this)">Descargar Word</button>
+      </div>
+      <div id="tab-plan" class="tab-content"><div id="plan-output"></div></div>
+      <div id="tab-word" class="tab-content" style="display:none;">
+        <p class="tab-desc">Descarga el plan completo como archivo Word editable (.docx).</p>
+        <button class="btn-primary" id="btn-word" onclick="descargarWord()">⬇ Descargar Word (.docx)</button>
+        <div id="word-status" class="status-msg"></div>
+      </div>
+    </section>
+
+    <!-- Sección Hoja EE -->
+    <section class="card" id="ee-section" style="display:none;">
+      <h2 style="font-size:16px;font-weight:600;margin-bottom:4px;">📋 Hoja de Coordinación EE</h2>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;">Ambos planes listos. Puedes generar la Hoja de Coordinación para Educación Especial.</p>
+      <div class="field" style="margin-bottom:12px;">
+        <label>Nombre de la maestra de Educación Especial</label>
+        <input type="text" id="maestra-ee" placeholder="ej. Prof. María González (dejar en blanco si no está asignada)"/>
+      </div>
+      <button class="btn-secondary" id="btn-ee" onclick="generarHojaEE()">✦ Generar Hoja de Coordinación EE</button>
+      <div id="ee-status" class="status-msg"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+// ─── Estado global ────────────────────────────────────────────
+let planActual = null;
+let planADL    = null;
+let planMate   = null;
+
+// ─── Pills ────────────────────────────────────────────────────
+document.querySelectorAll('.pill').forEach(pill => {
+  const cb = pill.querySelector('input[type=checkbox]');
+  function sync() { pill.classList.toggle('checked', cb.checked); }
+  sync(); cb.addEventListener('change', sync);
+});
+
+function onMateriaChange() {
+  const m = document.getElementById('materia').value;
+  document.getElementById('note-adl').style.display = m === 'Adquisición de la Lengua' ? 'block' : 'none';
+}
+
+// ─── Importar cronograma ───────────────────────────────────────
+let cronogramaData = null;
+
+async function extraerCronograma() {
+  const texto = document.getElementById('cronograma-texto').value.trim();
+  if (!texto) { alert('Pega primero el texto del cronograma.'); return; }
+
+  const btn = document.getElementById('btn-extraer');
+  const status = document.getElementById('cronograma-status');
+  btn.disabled = true; btn.textContent = 'Extrayendo...';
+  status.textContent = 'Analizando el cronograma...'; status.className = 'status-msg';
+  document.getElementById('cronograma-semanas').innerHTML = '';
+
+  try {
+    const resp = await fetch('/api/extraer-cronograma', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cronograma: texto })
+    });
+    if (!resp.ok) throw new Error(`Error ${resp.status}`);
+    const data = await resp.json();
+    const raw  = data.content.map(b => b.text||'').join('');
+    cronogramaData = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    if (!cronogramaData.semanas || !cronogramaData.semanas.length) {
+      throw new Error('No se encontraron semanas en el texto pegado.');
+    }
+    renderSemanas(cronogramaData);
+    status.textContent = `✓ ${cronogramaData.semanas.length} semana(s) encontradas. Haz clic en una para cargarla al formulario.`;
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`; status.className = 'status-msg error';
+  }
+  btn.disabled = false; btn.textContent = '✦ Extraer semanas';
+}
+
+function renderSemanas(data) {
+  const cont = document.getElementById('cronograma-semanas');
+  cont.innerHTML = '';
+  data.semanas.forEach((s, i) => {
+    const pill = document.createElement('span');
+    pill.className = 'pill';
+    pill.style.cursor = 'pointer';
+    pill.textContent = `Semana ${s.semana}: ${s.tema}`;
+    pill.onclick = () => usarSemana(i);
+    cont.appendChild(pill);
+  });
+}
+
+function usarSemana(i) {
+  if (!cronogramaData) return;
+  const s = cronogramaData.semanas[i];
+
+  if (cronogramaData.unidad) document.getElementById('unidad').value = cronogramaData.unidad;
+  if (cronogramaData.materia && Array.from(document.getElementById('materia').options).some(o => o.value === cronogramaData.materia)) {
+    document.getElementById('materia').value = cronogramaData.materia;
+  }
+  onMateriaChange();
+  document.getElementById('semana').value = s.semana;
+  document.getElementById('tema').value = s.tema;
+  document.getElementById('destrezas').value = s.destrezas;
+  document.getElementById('continuidad').value = s.continuidad || '';
+
+  document.querySelectorAll('#cronograma-semanas .pill').forEach(p => p.classList.remove('checked'));
+  document.querySelectorAll('#cronograma-semanas .pill')[i].classList.add('checked');
+
+  document.getElementById('form-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-plan').style.display = name === 'plan' ? 'block' : 'none';
+  document.getElementById('tab-word').style.display = name === 'word' ? 'block' : 'none';
+}
+
+// ─── Actualizar estado EE ─────────────────────────────────────
+function actualizarEstadoEE() {
+  document.getElementById('ee-banner').style.display = 'block';
+  const chipADL  = document.getElementById('chip-adl');
+  const chipMate = document.getElementById('chip-mate');
+  if (planADL)  { chipADL.textContent  = '✓ ADL listo';        chipADL.className  = 'ee-chip ready'; }
+  if (planMate) { chipMate.textContent = '✓ Matemática lista'; chipMate.className = 'ee-chip ready'; }
+  if (planADL && planMate) {
+    document.getElementById('ee-section').style.display = 'block';
+    document.getElementById('ee-banner').style.display = 'none';
+    document.getElementById('ee-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// ─── Systems ──────────────────────────────────────────────────
+const SYSTEMS = {
+"Adquisición de la Lengua": `Eres el asistente de planificación de Héctor Lozada Lacén, maestro de tercer grado, Escuela Celso González Vaillant, Loíza, PR. Materia: Adquisición de la Lengua.
+
+ESTÁNDARES REALES ADL (DE-PR): Comprensión auditiva y expresión oral / Lectura de textos literarios e informativos / Dominio de la lengua / Escritura y producción de textos / Personas, Lugares y Ambientes / Desarrollo Personal / Identidad Cultural / Cambio y Continuidad / Conciencia Global / Producción, Distribución y Consumo / Conciencia Cívica y Democrática
+
+EXPECTATIVAS REALES ADL:
+Oral: 3.AO.1.1, 3.AO.3.1, 3.AO.5.1, 3.AO.7.1, 3.AO.7.1a
+Lectura: 3.LLI.1.1a, 3.LLI.1.1b, 3.LLI.2.1, 3.LLI.3.1a, 3.LLI.3.1b, 3.LLI.4.1a, 3.LLI.6.1a, 3.LLI.8.1, 3.LLI.9.1, 3.LLI.10.1
+Dominio: 3.L.1.1, 3.L.1.1b, 3.L.1.1c, 3.L.1.1d, 3.L.2.1, 3.L.2.1b, 3.L.3.1, 3.L.3.1e, 3.L.4.1a, 3.L.4.1d, 3.L.5.1, 3.L.6.1
+Escritura: 3.E.3.1, 3.E.3.1a, 3.E.4.1, 3.E.7.1, 3.E.8.1, 3.E.9.1, 3.E.11.1
+ESOC integrado: 3.PLA.1, 3.PLA.1.1, 3.PLA.1.2, 3.PLA.1.3, 3.PLA.1.4, 3.PLA.9.2, 3.DP.1, 3.DP.1.1, 3.DP.1.2, 3.DP.2, 3.DP.2.2, 3.IC.1, 3.IC.7, 3.IC.10.1, 3.CC.7, 3.CC.7.2, 3.CCD.7.1
+
+NOTA: La integración con Estudios Sociales es EXPLÍCITA y estructural.`,
+
+"Matemática": `Eres el asistente de planificación de Héctor Lozada Lacén, maestro de tercer grado, Escuela Celso González Vaillant, Loíza, PR. Materia: Matemática.
+
+ESTÁNDARES REALES MATEMÁTICA (DE-PR): Numeración y Operación / Álgebra / Medición / Geometría / Análisis de Datos y Probabilidad
+
+EXPECTATIVAS REALES MATEMÁTICA:
+Numeración: 3.N.1.1, 3.N.1.2, 3.N.1.3, 3.N.2.1, 3.N.2.2, 3.N.3.1, 3.N.3.2, 3.N.4.1, 3.N.4.2, 3.N.4.3
+Álgebra: 3.A.5.1, 3.A.6.1, 3.A.6.2, 3.A.7.2
+Medición: 3.M.11.1
+Análisis de Datos: 3.E.16.1, 3.E.16.2`,
+
+"Ciencias": `Eres el asistente de planificación de Héctor Lozada Lacén, maestro de tercer grado, Escuela Celso González Vaillant, Loíza, PR. Materia: Ciencias.
+
+ESTÁNDARES REALES CIENCIAS (DE-PR): Ciencias Biológicas / Ciencias Físicas / Ciencias Terrestres y del Espacio / Ciencias Ambientales / Ingeniería y Tecnología
+
+EXPECTATIVAS REALES CIENCIAS:
+Ingeniería: 3.IT1.1, 3.IT1.2, 3.IT1.3, 3.IT1.4, 3.IT1.5, 3.IT1.6, 3.IT1.7, 3.IT1.8
+Biológicas: 3.CB1.1, 3.CB1.2, 3.CB2.1, 3.CB2.7, 3.CB2.8, 3.CB3.1, 3.CB3.2, 3.CB3.3, 3.CB3.4, 3.CB3.5
+Físicas: 3.CF1.1, 3.CF1.2, 3.CF2.1, 3.CF3.1
+Terrestres: 3.CT1.3, 3.CT1.4, 3.CT2.4, 3.CT2.5, 3.CT2.6
+Ambientales: 3.CA1.1, 3.CA1.2, 3.CA1.3, 3.CA1.4`
+};
+
+const BASE_SYSTEM = `
+ESTILO EXACTO DE HÉCTOR:
+- Objetivos: "Durante la lectura, el estudiante: a) analizará..., con poca dificultad. b) utilizará..., satisfactoriamente."
+- Inicio: siempre empieza "1. Actividades de rutina"
+- Desarrollo: 4-8 pasos numerados concretos
+- Cierre: reflexión breve
+- Reflexión de la Praxis: párrafo en pasado
+- SIEMPRE usar: satisfactoriamente, con poca dificultad, correctamente, efectivamente, con originalidad, con ayuda del maestro
+- Evidencia de Avalúo: "2. Tareas de Ejecución"
+- Proyecto Innovador: variar entre "Uso de la tecnología", "Comprensión lectora", "Trabajo colaborativo"
+- Acomodos Ed. Especial: "Ayuda individualizada / Instrucciones claras y precisas / Tiempo adicional / Ubicación del pupitre"
+- Enseñanza Diferenciada: "Instrucciones claras y precisas y Lector" o "Material impreso y Lector"
+
+Devuelve SOLO JSON sin texto adicional:
+{"meta":{"semana":"","fecha":"","materia":"","tema":"","unidad":"","transversales":[],"generadores":[]},"dias":[{"dia":"lunes","estandares":"","expectativas":"","objetivos":"","inicio":"","desarrollo":"","cierre":"","avaluo":"","proyecto":"","acomodos":"","diferenciada":"","integracion":"","materiales":"","reflexion":""}]}`;
+
+// ─── Generar plan ─────────────────────────────────────────────
+async function generarPlan() {
+  const materia   = document.getElementById('materia').value;
+  const semana    = document.getElementById('semana').value;
+  const fecha     = document.getElementById('fecha').value;
+  const unidad    = document.getElementById('unidad').value;
+  const tema      = document.getElementById('tema').value.trim();
+  const destrezas = document.getElementById('destrezas').value.trim();
+  if (!tema || !destrezas) { alert('Por favor ingresa el tema y las destrezas.'); return; }
+
+  const dias = Array.from(document.querySelectorAll('#dias-pills input:checked')).map(c => c.value);
+  if (!dias.length) { alert('Selecciona al menos un día.'); return; }
+
+  const transversales = Array.from(document.querySelectorAll('#transversales-pills input:checked')).map(c => c.value);
+  const generadores   = Array.from(document.querySelectorAll('#generadores-pills input:checked')).map(c => c.value);
+
+  const btn = document.getElementById('btn-gen');
+  btn.disabled = true; btn.textContent = 'Generando...';
+  document.getElementById('output-section').style.display = 'block';
+  document.getElementById('plan-output').innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+
+  const continuidad = document.getElementById('continuidad').value.trim();
+  const integracion = materia === 'Adquisición de la Lengua' ? 'Estudios Sociales (integración explícita y estructural)' : materia === 'Matemática' ? 'Estudios Sociales' : 'Matemática, Estudios Sociales';
+  const cont_txt = continuidad ? '\n- Lo cubierto la semana pasada: ' + continuidad + '\n\nIMPORTANTE: Continúa desde donde se dejó. No repitas lo ya cubierto.' : '';
+
+  try {
+    const resp = await fetch('/api/generar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: SYSTEMS[materia] + BASE_SYSTEM, prompt: 'Genera plan semanal:\n- Semana: ' + semana + ' | Fecha: ' + (fecha||'por definir') + ' | Materia: ' + materia + '\n- Tema: ' + tema + ' | Unidad: ' + (unidad||'por definir') + '\n- Destrezas: ' + destrezas + '\n- Días: ' + dias.join(', ') + '\n- Temas transversales: ' + transversales.join(' / ') + '\n- Temas generadores: ' + generadores.join(' / ') + '\n- Integración con: ' + integracion + cont_txt })
+    });
+    if (!resp.ok) throw new Error(`Error ${resp.status}`);
+    const data = await resp.json();
+    const raw  = data.content.map(b => b.text||'').join('');
+    const plan = JSON.parse(raw.replace(/```json|```/g,'').trim());
+
+    planActual = plan;
+    if (materia === 'Adquisición de la Lengua') planADL  = plan;
+    if (materia === 'Matemática')               planMate = plan;
+    actualizarEstadoEE();
+    renderPlan(plan);
+  } catch(e) {
+    document.getElementById('plan-output').innerHTML = `<p style="color:#c0392b;padding:1rem">Error: ${e.message}</p>`;
+  }
+  btn.disabled = false; btn.textContent = '✦ Generar plan semanal';
+}
+
+function renderPlan(plan) {
+  const campos = ['estandares','expectativas','objetivos','inicio','desarrollo','cierre','avaluo','proyecto','acomodos','diferenciada','integracion','materiales','reflexion'];
+  const etiquetas = { estandares:'Estándares', expectativas:'Expectativas', objetivos:'Objetivos', inicio:'Inicio', desarrollo:'Desarrollo', cierre:'Cierre', avaluo:'Evidencia de Avalúo', proyecto:'Proyecto Innovador', acomodos:'Acomodos Ed. Especial', diferenciada:'Enseñanza Diferenciada', integracion:'Integración con', materiales:'Materiales', reflexion:'Reflexión de la Praxis' };
+  let html = `<div class="plan-meta"><span class="meta-tag">Semana ${plan.meta.semana}</span><span class="meta-tag">${plan.meta.materia}</span><span class="meta-tag">${plan.meta.fecha}</span><span class="meta-tag">${plan.dias.length} días</span></div>`;
+  for (const d of plan.dias) {
+    html += `<div class="day-block"><div class="day-title">${d.dia.charAt(0).toUpperCase()+d.dia.slice(1)}</div>`;
+    for (const k of campos) html += `<div class="sec"><div class="sec-label">${etiquetas[k]}</div><div class="sec-text">${d[k]||''}</div></div>`;
+    html += '</div>';
+  }
+  document.getElementById('plan-output').innerHTML = html;
+}
+
+async function descargarWord() {
+  if (!planActual) { alert('Primero genera un plan.'); return; }
+  const btn = document.getElementById('btn-word');
+  const status = document.getElementById('word-status');
+  btn.disabled = true; btn.textContent = 'Generando Word...';
+  status.textContent = 'Procesando...'; status.className = 'status-msg';
+  try {
+    const resp = await fetch('/api/generar-word', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: planActual }) });
+    if (!resp.ok) throw new Error(`Error ${resp.status}`);
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `Plan_Semana${planActual.meta.semana}_${planActual.meta.materia.replace(/ /g,'_')}.docx`; a.click();
+    URL.revokeObjectURL(url);
+    status.textContent = '✓ Descargado correctamente.';
+  } catch(e) { status.textContent = `Error: ${e.message}`; status.className = 'status-msg error'; }
+  btn.disabled = false; btn.textContent = '⬇ Descargar Word (.docx)';
+}
+
+// ─── Generar Hoja EE ─────────────────────────────────────────
+async function generarHojaEE() {
+  if (!planADL || !planMate) { alert('Necesitas generar ADL y Matemática primero.'); return; }
+  const maestraEE = document.getElementById('maestra-ee').value.trim();
+  const btn = document.getElementById('btn-ee');
+  const status = document.getElementById('ee-status');
+  btn.disabled = true; btn.textContent = 'Generando...';
+  status.textContent = 'Creando objetivos adaptados para EE...'; status.className = 'status-msg';
+
+  try {
+    // Paso 1: Generar objetivos EE con IA
+    const respEE = await fetch('/api/generar-ee', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planADL, planMate })
+    });
+    if (!respEE.ok) throw new Error(`Error ${respEE.status}`);
+    const dataEE = await respEE.json();
+    const rawEE  = dataEE.content.map(b => b.text||'').join('');
+    const objetivosEE = JSON.parse(rawEE.replace(/```json|```/g,'').trim());
+
+    status.textContent = 'Generando documento Word...';
+
+    // Paso 2: Generar Word
+    const respWord = await fetch('/api/generar-word-ee', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ planADL, planMate, objetivosEE, maestraEE: maestraEE || 'Por asignar' })
+    });
+    if (!respWord.ok) throw new Error(`Error ${respWord.status}`);
+    const blob = await respWord.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `HojaEE_Semana${planADL.meta.semana}.docx`; a.click();
+    URL.revokeObjectURL(url);
+    status.textContent = '✓ Hoja de Coordinación EE descargada.';
+  } catch(e) { status.textContent = `Error: ${e.message}`; status.className = 'status-msg error'; }
+  btn.disabled = false; btn.textContent = '✦ Generar Hoja de Coordinación EE';
+}
+</script>
+</body>
+</html>

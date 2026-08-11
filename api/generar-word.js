@@ -202,7 +202,7 @@ async function generarDocx(plan) {
 
   children.push(new Table({
     width: { size: TW, type: WidthType.DXA },
-    columnWidths,
+    columnWidths: colWidths,
     rows: mainRows
   }));
 

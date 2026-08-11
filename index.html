@@ -220,6 +220,19 @@ document.querySelectorAll('.pill').forEach(pill => {
   sync(); cb.addEventListener('change', sync);
 });
 
+// Lee el cuerpo del error de una respuesta fallida (JSON o texto) en vez de mostrar solo el código.
+async function throwIfError(resp) {
+  if (resp.ok) return;
+  let msg = `Error ${resp.status}`;
+  try {
+    const data = await resp.clone().json();
+    if (data && data.error) msg += ': ' + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
+  } catch (_) {
+    try { const t = await resp.clone().text(); if (t) msg += ': ' + t.slice(0, 400); } catch (_) {}
+  }
+  throw new Error(msg);
+}
+
 function onMateriaChange() {
   const m = document.getElementById('materia').value;
   document.getElementById('note-adl').style.display = m === 'Adquisición de la Lengua' ? 'block' : 'none';
@@ -432,7 +445,7 @@ async function generarPlan() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ system: SYSTEMS[materia] + BASE_SYSTEM, prompt: 'Genera plan semanal:\n- Semana: ' + semana + ' | Fecha: ' + (fecha||'por definir') + ' | Materia: ' + materia + '\n- Tema: ' + tema + ' | Unidad: ' + (unidad||'por definir') + '\n- Destrezas: ' + destrezas + '\n- Días: ' + dias.join(', ') + '\n- Temas transversales: ' + transversales.join(' / ') + '\n- Temas generadores: ' + generadores.join(' / ') + '\n- Integración con: ' + integracion + cont_txt + detalleDiario })
     });
-    if (!resp.ok) throw new Error(`Error ${resp.status}`);
+    await throwIfError(resp);
     const data = await resp.json();
     const raw  = data.content.map(b => b.text||'').join('');
     const plan = JSON.parse(raw.replace(/```json|```/g,'').trim());
@@ -468,7 +481,7 @@ async function descargarWord() {
   status.textContent = 'Procesando...'; status.className = 'status-msg';
   try {
     const resp = await fetch('/api/generar-word', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: planActual }) });
-    if (!resp.ok) throw new Error(`Error ${resp.status}`);
+    await throwIfError(resp);
     const blob = await resp.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -494,7 +507,7 @@ async function generarHojaEE() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ planADL, planMate })
     });
-    if (!respEE.ok) throw new Error(`Error ${respEE.status}`);
+    await throwIfError(respEE);
     const dataEE = await respEE.json();
     const rawEE  = dataEE.content.map(b => b.text||'').join('');
     const objetivosEE = JSON.parse(rawEE.replace(/```json|```/g,'').trim());
@@ -506,7 +519,7 @@ async function generarHojaEE() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ planADL, planMate, objetivosEE, maestraEE: maestraEE || 'Por asignar' })
     });
-    if (!respWord.ok) throw new Error(`Error ${respWord.status}`);
+    await throwIfError(respWord);
     const blob = await respWord.blob();
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');

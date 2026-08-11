@@ -111,8 +111,8 @@ async function generarDocx(plan) {
   children.push(para(txt('')));
 
   // ── Temas transversales y generadores ─────────────────────
-  const transversalesTexto = (meta.transversales || []).map(t => `☒ ${t}`).join('\n');
-  const generadoresTexto   = (meta.generadores   || []).map(g => `☒ ${g}`).join('\n');
+  const transversalesTexto = (Array.isArray(meta.transversales) ? meta.transversales : []).map(t => `☒ ${t}`).join('\n');
+  const generadoresTexto   = (Array.isArray(meta.generadores)   ? meta.generadores   : []).map(g => `☒ ${g}`).join('\n');
 
   children.push(new Table({
     width: { size: TW, type: WidthType.DXA },
@@ -183,7 +183,10 @@ async function generarDocx(plan) {
           children: [para(txt(sec.label, { bold: true, size: 16 }))]
         }),
         ...dias.map((d, i) => {
-          const val = d[sec.key] || '';
+          const raw = d[sec.key];
+          const val = typeof raw === 'string' ? raw
+            : Array.isArray(raw) ? raw.join('\n')
+            : (raw != null ? String(raw) : '');
           const lines = val.split('\n');
           const paras = lines.map(line => para(txt(line, { size: 15 }), { after: 30 }));
           return new TableCell({

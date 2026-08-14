@@ -247,19 +247,6 @@ let cronogramaData = null;
 let diasCronogramaActual = null;   // detalle día por día de la semana cargada actualmente
 let semanaCronogramaActual = null; // número de semana al que corresponde diasCronogramaActual
 
-
-function safeJSON(raw) {
-  // Strip markdown code fences
-  let s = raw.replace(/```json|```/g, '').trim();
-  // Find the outermost JSON object
-  const start = s.indexOf('{');
-  const end = s.lastIndexOf('}');
-  if (start !== -1 && end !== -1) s = s.slice(start, end + 1);
-  // Remove control characters that break JSON parsing
-  s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-  return s;
-}
-
 async function extraerCronograma() {
   const texto = document.getElementById('cronograma-texto').value.trim();
   if (!texto) { alert('Pega primero el texto del cronograma.'); return; }
@@ -278,7 +265,7 @@ async function extraerCronograma() {
     if (!resp.ok) throw new Error(`Error ${resp.status}`);
     const data = await resp.json();
     const raw  = data.content.map(b => b.text||'').join('');
-    cronogramaData = JSON.parse(safeJSON(raw));
+    cronogramaData = JSON.parse(raw.replace(/```json|```/g,'').trim());
 
     if (!cronogramaData.semanas || !cronogramaData.semanas.length) {
       throw new Error('No se encontraron semanas en el texto pegado.');
@@ -417,7 +404,7 @@ ESTILO EXACTO DE HÉCTOR:
 - Enseñanza Diferenciada: "Instrucciones claras y precisas y Lector" o "Material impreso y Lector"
 
 Devuelve SOLO JSON sin texto adicional:
-{"meta":{"semana":"","fecha":"","materia":"","tema":"","unidad":"","transversales":[],"generadores":[]},"dias":[{"dia":"lunes","estandares":"","expectativas":"","objetivos":"","inicio":"","desarrollo":"","cierre":"","avaluo":"","proyecto":"","acomodos":"","diferenciada":"","integracion":"","materiales":"","reflexion":""}]}`;
+{"meta":{"semana":"","fecha":"","materia":"","tema":"","unidad":"","transversales":[],"generadores":[]},"dias":[{"dia":"lunes","objetivos":"","inicio":"","desarrollo":"","cierre":"","avaluo":"","materiales":"","reflexion":""}]}`;
 
 // ─── Generar plan ─────────────────────────────────────────────
 async function generarPlan() {
@@ -467,7 +454,7 @@ async function generarPlan() {
     await throwIfError(resp);
     const data = await resp.json();
     const raw  = data.content.map(b => b.text||'').join('');
-    const plan = JSON.parse(safeJSON(raw));
+    const plan = JSON.parse(raw.replace(/```json|```/g,'').trim());
 
     planActual = plan;
     if (materia === 'Adquisición de la Lengua') planADL  = plan;
@@ -481,8 +468,8 @@ async function generarPlan() {
 }
 
 function renderPlan(plan) {
-  const campos = ['estandares','expectativas','objetivos','inicio','desarrollo','cierre','avaluo','proyecto','acomodos','diferenciada','integracion','materiales','reflexion'];
-  const etiquetas = { estandares:'Estándares', expectativas:'Expectativas', objetivos:'Objetivos', inicio:'Inicio', desarrollo:'Desarrollo', cierre:'Cierre', avaluo:'Evidencia de Avalúo', proyecto:'Proyecto Innovador', acomodos:'Acomodos Ed. Especial', diferenciada:'Enseñanza Diferenciada', integracion:'Integración con', materiales:'Materiales', reflexion:'Reflexión de la Praxis' };
+  const campos = ['objetivos','inicio','desarrollo','cierre','avaluo','materiales','reflexion'];
+  const etiquetas = { objetivos:'Objetivos', inicio:'Inicio', desarrollo:'Desarrollo', cierre:'Cierre', avaluo:'Evidencia de Avalúo', materiales:'Materiales', reflexion:'Reflexión de la Praxis' };
   let html = `<div class="plan-meta"><span class="meta-tag">Semana ${plan.meta.semana}</span><span class="meta-tag">${plan.meta.materia}</span><span class="meta-tag">${plan.meta.fecha}</span><span class="meta-tag">${plan.dias.length} días</span></div>`;
   for (const d of plan.dias) {
     html += `<div class="day-block"><div class="day-title">${d.dia.charAt(0).toUpperCase()+d.dia.slice(1)}</div>`;
@@ -529,7 +516,7 @@ async function generarHojaEE() {
     await throwIfError(respEE);
     const dataEE = await respEE.json();
     const rawEE  = dataEE.content.map(b => b.text||'').join('');
-    const objetivosEE = JSON.parse(safeJSON(rawEE));
+    const objetivosEE = JSON.parse(rawEE.replace(/```json|```/g,'').trim());
 
     status.textContent = 'Generando documento Word...';
 

@@ -247,6 +247,19 @@ let cronogramaData = null;
 let diasCronogramaActual = null;   // detalle día por día de la semana cargada actualmente
 let semanaCronogramaActual = null; // número de semana al que corresponde diasCronogramaActual
 
+
+function safeJSON(raw) {
+  // Strip markdown code fences
+  let s = raw.replace(/```json|```/g, '').trim();
+  // Find the outermost JSON object
+  const start = s.indexOf('{');
+  const end = s.lastIndexOf('}');
+  if (start !== -1 && end !== -1) s = s.slice(start, end + 1);
+  // Remove control characters that break JSON parsing
+  s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  return s;
+}
+
 async function extraerCronograma() {
   const texto = document.getElementById('cronograma-texto').value.trim();
   if (!texto) { alert('Pega primero el texto del cronograma.'); return; }
@@ -265,7 +278,7 @@ async function extraerCronograma() {
     if (!resp.ok) throw new Error(`Error ${resp.status}`);
     const data = await resp.json();
     const raw  = data.content.map(b => b.text||'').join('');
-    cronogramaData = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    cronogramaData = JSON.parse(safeJSON(raw));
 
     if (!cronogramaData.semanas || !cronogramaData.semanas.length) {
       throw new Error('No se encontraron semanas en el texto pegado.');
@@ -454,7 +467,7 @@ async function generarPlan() {
     await throwIfError(resp);
     const data = await resp.json();
     const raw  = data.content.map(b => b.text||'').join('');
-    const plan = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    const plan = JSON.parse(safeJSON(raw));
 
     planActual = plan;
     if (materia === 'Adquisición de la Lengua') planADL  = plan;
@@ -516,7 +529,7 @@ async function generarHojaEE() {
     await throwIfError(respEE);
     const dataEE = await respEE.json();
     const rawEE  = dataEE.content.map(b => b.text||'').join('');
-    const objetivosEE = JSON.parse(rawEE.replace(/```json|```/g,'').trim());
+    const objetivosEE = JSON.parse(safeJSON(rawEE));
 
     status.textContent = 'Generando documento Word...';
 

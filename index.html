@@ -143,6 +143,10 @@ textarea { resize: vertical; min-height: 64px; }
           <label>¿Qué cubriste la semana pasada? <span style="font-weight:400;color:var(--text-muted)">(opcional — para continuidad de unidad)</span></label>
           <textarea id="continuidad" placeholder="ej. Introduje puntos cardinales y el archipiélago de PR. Los estudiantes completaron las partes 1-3 de la autobiografía geográfica." style="min-height:56px;"></textarea>
         </div>
+        <div class="field full">
+          <label>Recursos y materiales disponibles esta semana <span style="font-weight:400;color:var(--text-muted)">(opcional — cuentos, enlaces, hojas de trabajo, etc.)</span></label>
+          <textarea id="recursos" placeholder="ej. Cuento: 'El día en que descubres quién eres' — https://tinyurl.com/cuentoEDQDQE&#10;YouTube puntos cardinales: https://www.youtube.com/watch?v=hnMcrTC90jA&#10;Hoja de trabajo de archipiélago&#10;Mapa político de Puerto Rico 78 municipios" style="min-height:80px;"></textarea>
+        </div>
       </div>
       <div class="divider"></div>
       <div class="field">
@@ -424,8 +428,10 @@ async function generarPlan() {
   document.getElementById('plan-output').innerHTML = '<div class="loading"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
 
   const continuidad = document.getElementById('continuidad').value.trim();
+  const recursos = document.getElementById('recursos').value.trim();
   const integracion = materia === 'Adquisición de la Lengua' ? 'Estudios Sociales (integración explícita y estructural)' : materia === 'Matemática' ? 'Estudios Sociales' : 'Matemática, Estudios Sociales';
   const cont_txt = continuidad ? '\n- Lo cubierto la semana pasada: ' + continuidad + '\n\nIMPORTANTE: Continúa desde donde se dejó. No repitas lo ya cubierto.' : '';
+  const recursos_txt = recursos ? '\n- Recursos y materiales disponibles esta semana (ÚSALOS EXACTAMENTE en el Desarrollo donde aplique — no inventes otros materiales si estos están disponibles):\n' + recursos : '';
 
   // Si esta semana viene de un cronograma importado (con detalle día por día), se lo pasamos
   // a la IA como contenido ya definido — no debe inventar otra actividad para esos días.
@@ -443,7 +449,7 @@ async function generarPlan() {
   try {
     const resp = await fetch('/api/generar', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ system: SYSTEMS[materia] + BASE_SYSTEM, prompt: 'Genera plan semanal:\n- Semana: ' + semana + ' | Fecha: ' + (fecha||'por definir') + ' | Materia: ' + materia + '\n- Tema: ' + tema + ' | Unidad: ' + (unidad||'por definir') + '\n- Destrezas: ' + destrezas + '\n- Días: ' + dias.join(', ') + '\n- Temas transversales: ' + transversales.join(' / ') + '\n- Temas generadores: ' + generadores.join(' / ') + '\n- Integración con: ' + integracion + cont_txt + detalleDiario })
+      body: JSON.stringify({ system: SYSTEMS[materia] + BASE_SYSTEM, prompt: 'Genera plan semanal:\n- Semana: ' + semana + ' | Fecha: ' + (fecha||'por definir') + ' | Materia: ' + materia + '\n- Tema: ' + tema + ' | Unidad: ' + (unidad||'por definir') + '\n- Destrezas: ' + destrezas + '\n- Días: ' + dias.join(', ') + '\n- Temas transversales: ' + transversales.join(' / ') + '\n- Temas generadores: ' + generadores.join(' / ') + '\n- Integración con: ' + integracion + cont_txt + recursos_txt + detalleDiario })
     });
     await throwIfError(resp);
     const data = await resp.json();

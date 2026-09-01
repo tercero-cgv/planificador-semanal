@@ -10,26 +10,22 @@ export default async function handler(req, res) {
 
   const system = `Eres asistente de planificación de Héctor Lozada Lacén, maestro de tercer grado, Escuela Celso González Vaillant, Loíza, PR.
 
-Tu tarea es generar los objetivos para la Hoja de Coordinación del Maestro Regular con el Maestro de Educación Especial de Salón Recurso.
+Tu tarea es generar objetivos simplificados para la Hoja de Coordinación de Educación Especial.
 
 INSTRUCCIONES:
-- Reformula los objetivos del plan semanal de forma más corta, directa y adaptada para estudiantes de Educación Especial
-- Usa lenguaje claro y accesible, sin frases de evaluación complejas
-- Mantén el enfoque en las destrezas esenciales de cada día
+- Reformula los objetivos de forma más corta y directa para estudiantes de EE
 - Máximo 2-3 objetivos por día por materia
-- Formato: "a) verbo + contenido. b) verbo + contenido."
-- NO copies los objetivos exactos del plan — simplifícalos para EE
+- Formato: a) verbo + contenido. b) verbo + contenido.
+- NO copies exacto — simplifica para EE
 
-Devuelve SOLO JSON sin texto adicional:
-{
-  "dias": [
-    {
-      "dia": "lunes",
-      "objetivosADL": "a) ...\nb) ...",
-      "objetivosMate": "a) ...\nb) ..."
-    }
-  ]
-}`;
+FORMATO DE RESPUESTA OBLIGATORIO — NO uses JSON. Usa este formato exacto:
+
+###DIA###nombre_del_dia
+###ADL###objetivos ADL aquí
+###MATE###objetivos Matemática aquí
+###FIN_DIA###
+
+Genera un bloque por cada día. Puedes usar cualquier carácter dentro del texto.`;
 
   const diasADL = planADL.dias.map(d => `${d.dia}: ${d.objetivos}`).join('\n');
   const diasMate = planMate.dias.map(d => `${d.dia}: ${d.objetivos}`).join('\n');
@@ -53,7 +49,7 @@ Días a incluir: ${planADL.dias.map(d => d.dia).join(', ')}`;
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: 'claude-sonnet-4-6',
         max_tokens: 2000,
         system,
         messages: [{ role: 'user', content: prompt }]
@@ -66,7 +62,26 @@ Días a incluir: ${planADL.dias.map(d => d.dia).join(', ')}`;
     }
 
     const data = await response.json();
-    return res.status(200).json(data);
+    const raw = data.content.map(b => b.text || '').join('');
+
+    // Parse delimited format
+    const dias = [];
+    const dayPattern = /###DIA###(\w+)\n([\s\S]*?)###FIN_DIA###/g;
+    let match;
+    while ((match = dayPattern.exec(raw)) !== null) {
+      const block = match[2];
+      const adlMatch = block.match(/###ADL###([\s\S]*?)(?=###|$)/);
+      const mateMatch = block.match(/###MATE###([\s\S]*?)(?=###|$)/);
+      dias.push({
+        dia: match[1].trim(),
+        objetivosADL: adlMatch ? adlMatch[1].trim() : '',
+        objetivosMate: mateMatch ? mateMatch[1].trim() : ''
+      });
+    }
+
+    const result = { dias };
+    return res.status(200).json({ content: [{ type: 'text', text: JSON.stringify(result) }] });
+
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

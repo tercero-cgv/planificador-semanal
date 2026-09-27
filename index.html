@@ -402,18 +402,27 @@ Ambientales: 3.CA1.1, 3.CA1.2, 3.CA1.3, 3.CA1.4`
 
 const BASE_SYSTEM = `
 ESTILO EXACTO DE HÉCTOR:
-- Objetivos: "Durante la lectura, el estudiante: a) analizará..., con poca dificultad. b) utilizará..., satisfactoriamente."
-- Inicio: mínimo 3 pasos numerados. El paso 1 SIEMPRE es "Actividades de rutina", pero nunca se queda ahí — agrega pasos 2 y 3 (o más) con algo que genere interés real ese día específico: una pregunta de enganche, una actividad corta motivadora, o conectar el tema del día con algo conocido por los estudiantes. Debe estar relacionado directamente con el tema/actividad de ESE día, no ser genérico.
+
+- Objetivos — situación observable: VARÍA la frase inicial según lo que ocurre ese día. No uses siempre "Durante la lección". Ejemplos reales:
+  "Durante la clase, el estudiante:"
+  "A través de la lectura, el estudiante:"
+  "Después de la discusión de conceptos y la actividad, el estudiante:"
+  "Al terminar la clase, el estudiante:"
+  "Al finalizar la discusión en clase, el estudiante:"
+  "Mediante la actividad práctica, el estudiante:"
+  Elige la que mejor describa lo que REALMENTE ocurre ese día.
+
+- PRUEBAS Y EXÁMENES: Si el campo de destrezas o recursos menciona "prueba", "examen", "quiz" o "prueba corta", el plan de ESE DÍA debe estructurarse alrededor de la prueba. El desarrollo debe incluir: repaso rápido, instrucciones para la prueba, administración de la prueba y recogida. NO inventes una clase nueva sobre el tema. El objetivo debe reflejar que los estudiantes demostrarán dominio, no que aprenderán algo nuevo.
+
+- Inicio: mínimo 3 pasos numerados. El paso 1 es "Actividades de rutina" — VARÍA lo que incluye según el día (puede ser repaso oral, preguntas de activación, revisión de tarea, lluvia de ideas, conexión con el tema anterior). NUNCA menciones calendario ni pase de lista — eso ocurre una sola vez en la mañana, no en cada clase. Los pasos 2 y 3 deben conectar directamente con el tema del día.
+
 - Desarrollo: 4-8 pasos numerados concretos
 - Cierre: reflexión breve
 - Reflexión de la Praxis: UNA oración en pasado, máximo dos. Ejemplo: "Los estudiantes participaron activamente y demostraron comprensión del tema." NUNCA más de dos oraciones.
 - SIEMPRE usar: satisfactoriamente, con poca dificultad, correctamente, efectivamente, con originalidad, con ayuda del maestro
 - Evidencia de Avalúo: "2. Tareas de Ejecución"
-- Proyecto Innovador: variar entre "Uso de la tecnología", "Comprensión lectora", "Trabajo colaborativo"
-- Acomodos Ed. Especial: "Ayuda individualizada / Instrucciones claras y precisas / Tiempo adicional / Ubicación del pupitre"
-- Enseñanza Diferenciada: "Instrucciones claras y precisas y Lector" o "Material impreso y Lector"
 
-Devuelve SOLO JSON sin texto adicional:
+Devuelve SOLO JSON sin texto adicional. CRÍTICO: No uses comillas dobles (") dentro de los valores de texto — usa comillas simples (') si necesitas citar algo.
 {"meta":{"semana":"","fecha":"","materia":"","tema":"","unidad":"","transversales":[],"generadores":[]},"dias":[{"dia":"lunes","objetivos":"","inicio":"","desarrollo":"","cierre":"","avaluo":"","materiales":"","reflexion":""}]}`;
 
 // ─── Generar plan ─────────────────────────────────────────────

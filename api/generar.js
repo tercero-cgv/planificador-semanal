@@ -84,7 +84,7 @@ function parseDelimited(raw) {
   };
 
   const dias = [];
-  const dayPattern = /###DIA###(\w+)\n([\s\S]*?)###FIN_DIA###/g;
+  const dayPattern = /###DIA###([^\n]+)\n([\s\S]*?)###FIN_DIA###/g;
   let match;
   while ((match = dayPattern.exec(raw)) !== null) {
     dias.push({

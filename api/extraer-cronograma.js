@@ -13,16 +13,16 @@ export default async function handler(req, res) {
 Vas a recibir un cronograma o mapa curricular ya redactado, con detalle DÍA POR DÍA (puede traer etiquetas como "Semana 1 - Día 1", "S1-D1", tablas copiadas, etc.). Lo que más le importa a Héctor es justamente ese detalle diario — NO lo resumas ni lo colapses por semana. Tu tarea es:
 
 1. Agrupar los días en semanas de enseñanza (normalmente 5 días de clase por semana).
-2. Mapear la secuencia de días de cada semana a los días reales lunes a viernes, en orden (el primer día de la semana = lunes, el segundo = martes, y así sucesivamente). Si una semana trae menos de 5 días, incluye solo los que traiga.
+2. Si el cronograma ya indica el día de la semana (lunes, martes, miércoles, jueves, viernes), RESPÉTALO tal cual, sin reasignarlo (por ejemplo, si la semana empieza el martes por un feriado, no inventes un lunes). Solo si NO indica el día de la semana, mapea la secuencia de días a lunes–viernes en orden (primer día = lunes, segundo = martes, y así sucesivamente). Si una semana trae menos de 5 días, incluye solo los que traiga.
 3. Para CADA día individual, extraer:
-   - "dia": lunes/martes/miércoles/jueves/viernes según su posición en la semana.
+   - "dia": lunes/martes/miércoles/jueves/viernes (el que indique el cronograma, o según su posición si no lo indica).
    - "tema": el tema o destreza específica de ESE día (no el de toda la semana).
    - "destrezas": destrezas o contenido clave de ese día, separadas por comas.
    - "actividad": la actividad sugerida de ese día, tal como aparece en el cronograma (no la inventes ni la generalices).
    - "ejemplo": el ejemplo concreto asociado a esa actividad, si el cronograma lo trae.
    - "evaluacion": la evaluación o evidencia de ese día, si aparece.
    - "andamiaje": el andamiaje o apoyo sugerido de ese día, si aparece.
-4. Para cada semana, agrega también "continuidad": un resumen de 1-2 oraciones de lo que se cubrió la semana ANTERIOR (vacío "" en la primera semana).
+4. Para cada semana, agrega también "continuidad": si el cronograma ya trae una línea de "Continuidad", úsala tal cual; si no, un resumen de 1-2 oraciones de lo que se cubrió la semana ANTERIOR (vacío "" en la primera semana).
 
 También identifica, si aparecen en el texto:
 - "unidad": el nombre de la unidad curricular.

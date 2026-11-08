@@ -95,6 +95,22 @@ textarea { resize: vertical; min-height: 64px; }
       </div>
     </div>
 
+    <!-- Cargar plan existente (para la Hoja EE sin regenerar) -->
+    <details class="card" id="cargar-plan" style="margin-bottom:1.5rem;">
+      <summary style="cursor:pointer;font-size:14px;font-weight:600;">📥 Ya tengo el plan de ADL o Matemática: cargarlo sin regenerar</summary>
+      <p style="font-size:13px;color:var(--text-muted);margin:10px 0;">Pega los objetivos de cada día, uno por línea, con el formato <b>lunes: objetivos…</b>. Así la Hoja EE no depende de que vuelvas a generar el plan (no gasta crédito).</p>
+      <div class="field"><label>Materia</label>
+        <select id="cp-materia"><option value="Adquisición de la Lengua">Adquisición de la Lengua</option><option value="Matemática">Matemática</option></select></div>
+      <div class="field"><label>Semana</label><input type="text" id="cp-semana"/></div>
+      <div class="field"><label>Fecha</label><input type="text" id="cp-fecha" placeholder="ej. 9 al 13 de noviembre de 2026"/></div>
+      <div class="field"><label>Unidad</label><input type="text" id="cp-unidad"/></div>
+      <div class="field"><label>Tema</label><input type="text" id="cp-tema"/></div>
+      <div class="field"><label>Objetivos por día</label>
+        <textarea id="cp-objetivos" rows="7" placeholder="lunes: a) Identificar… b) Leer…&#10;martes: a) …"></textarea></div>
+      <button class="btn-secondary" onclick="cargarPlanExistente()">Guardar este plan</button>
+      <div id="cp-status" class="status-msg"></div>
+    </details>
+
     <!-- Importar cronograma -->
     <section class="card" id="import-section">
       <h2 style="font-size:16px;font-weight:600;margin-bottom:4px;">📥 Importar cronograma</h2>
@@ -216,6 +232,26 @@ textarea { resize: vertical; min-height: 64px; }
 let planActual = null;
 let planADL    = null;
 let planMate   = null;
+
+// ─── Persistencia local (sobrevive a recargas y apagones) ─────
+const LS_KEYS = { ADL: 'planificador_plan_ADL', MATE: 'planificador_plan_MATE' };
+function guardarPlanLocal(clave, plan) {
+  try { localStorage.setItem(LS_KEYS[clave], JSON.stringify({ plan, guardado: new Date().toISOString() })); return true; }
+  catch (e) { return false; }
+}
+function leerPlanLocal(clave) {
+  try { const r = localStorage.getItem(LS_KEYS[clave]); return r ? JSON.parse(r) : null; }
+  catch (e) { return null; }
+}
+function borrarPlanLocal(clave) {
+  try { localStorage.removeItem(LS_KEYS[clave]); } catch (e) {}
+  if (clave === 'ADL') planADL = null; else planMate = null;
+  actualizarEstadoEE(false);
+}
+function fechaCorta(iso) {
+  try { return new Date(iso).toLocaleString('es-PR', { day:'numeric', month:'short', hour:'numeric', minute:'2-digit' }); }
+  catch (e) { return ''; }
+}
 
 // ─── Pills ────────────────────────────────────────────────────
 document.querySelectorAll('.pill').forEach(pill => {
@@ -350,18 +386,57 @@ function switchTab(name, el) {
 }
 
 // ─── Actualizar estado EE ─────────────────────────────────────
-function actualizarEstadoEE() {
-  document.getElementById('ee-banner').style.display = 'block';
+function actualizarEstadoEE(scroll = true) {
   const chipADL  = document.getElementById('chip-adl');
   const chipMate = document.getElementById('chip-mate');
-  if (planADL)  { chipADL.textContent  = '✓ ADL listo';        chipADL.className  = 'ee-chip ready'; }
-  if (planMate) { chipMate.textContent = '✓ Matemática lista'; chipMate.className = 'ee-chip ready'; }
-  if (planADL && planMate) {
-    document.getElementById('ee-section').style.display = 'block';
-    document.getElementById('ee-banner').style.display = 'none';
-    document.getElementById('ee-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  const sA = leerPlanLocal('ADL'), sM = leerPlanLocal('MATE');
+  const tag = (s) => s ? ' · guardado ' + fechaCorta(s.guardado) : '';
+  if (planADL)  { chipADL.textContent  = '✓ ADL listo (sem. ' + (planADL.meta.semana||'?') + ')' + tag(sA) + '  ✕'; chipADL.className  = 'ee-chip ready'; }
+  else          { chipADL.textContent  = '⏳ ADL pendiente'; chipADL.className = 'ee-chip pending'; }
+  if (planMate) { chipMate.textContent = '✓ Matemática lista (sem. ' + (planMate.meta.semana||'?') + ')' + tag(sM) + '  ✕'; chipMate.className = 'ee-chip ready'; }
+  else          { chipMate.textContent = '⏳ Matemática pendiente'; chipMate.className = 'ee-chip pending'; }
+  chipADL.style.cursor = chipMate.style.cursor = 'pointer';
+  chipADL.title = chipMate.title = 'Clic para borrar el plan guardado';
+  chipADL.onclick  = () => { if (planADL  && confirm('¿Borrar el plan de ADL guardado?'))        borrarPlanLocal('ADL'); };
+  chipMate.onclick = () => { if (planMate && confirm('¿Borrar el plan de Matemática guardado?')) borrarPlanLocal('MATE'); };
+  const listo = planADL && planMate;
+  document.getElementById('ee-section').style.display = listo ? 'block' : 'none';
+  document.getElementById('ee-banner').style.display = listo ? 'none' : 'block';
+  if (listo && scroll) document.getElementById('ee-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+function cargarPlanExistente() {
+  const st = document.getElementById('cp-status');
+  const materia = document.getElementById('cp-materia').value;
+  const texto = document.getElementById('cp-objetivos').value;
+  const dias = [];
+  for (const linea of texto.split(/\n/)) {
+    const m = linea.match(/^\s*(lunes|martes|mi[eé]rcoles|jueves|viernes)\s*[:\-–]\s*(.*)$/i);
+    if (m) dias.push({ dia: m[1].toLowerCase(), objetivos: m[2].trim() });
+    else if (dias.length && linea.trim()) dias[dias.length-1].objetivos += '\n' + linea.trim();
+  }
+  if (!dias.length) { st.textContent = 'No encontré días. Usa el formato "lunes: objetivos…" en cada línea.'; st.className = 'status-msg error'; return; }
+  const plan = { meta: {
+    semana: document.getElementById('cp-semana').value.trim(),
+    fecha: document.getElementById('cp-fecha').value.trim(),
+    materia, unidad: document.getElementById('cp-unidad').value.trim(),
+    tema: document.getElementById('cp-tema').value.trim(),
+    transversales: [], generadores: [] }, dias };
+  const clave = materia === 'Matemática' ? 'MATE' : 'ADL';
+  if (clave === 'ADL') planADL = plan; else planMate = plan;
+  const ok = guardarPlanLocal(clave, plan);
+  actualizarEstadoEE();
+  st.textContent = ok ? '✓ Plan de ' + materia + ' guardado (' + dias.length + ' días).' : 'Cargado, pero el navegador no permitió guardarlo.';
+  st.className = 'status-msg';
+}
+
+// Restaurar lo guardado al abrir la página
+(function restaurarPlanes() {
+  const a = leerPlanLocal('ADL'), m = leerPlanLocal('MATE');
+  if (a && a.plan) planADL = a.plan;
+  if (m && m.plan) planMate = m.plan;
+  actualizarEstadoEE(false);
+})();
 
 // ─── Systems ──────────────────────────────────────────────────
 const SYSTEMS = {
@@ -476,8 +551,8 @@ async function generarPlan() {
     const plan = JSON.parse(safeJSON(raw));
 
     planActual = plan;
-    if (materia === 'Adquisición de la Lengua') planADL  = plan;
-    if (materia === 'Matemática')               planMate = plan;
+    if (materia === 'Adquisición de la Lengua') { planADL  = plan; guardarPlanLocal('ADL', plan); }
+    if (materia === 'Matemática')               { planMate = plan; guardarPlanLocal('MATE', plan); }
     actualizarEstadoEE();
     renderPlan(plan);
   } catch(e) {

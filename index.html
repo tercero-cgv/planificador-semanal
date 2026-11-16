@@ -95,6 +95,9 @@ textarea { resize: vertical; min-height: 64px; }
       </div>
     </div>
 
+    <!-- Planes guardados -->
+    <div id="planes-guardados" style="display:none;margin-bottom:1rem;font-size:13px;"></div>
+
     <!-- Cargar plan existente (para la Hoja EE sin regenerar) -->
     <details class="card" id="cargar-plan" style="margin-bottom:1.5rem;">
       <summary style="cursor:pointer;font-size:14px;font-weight:600;">📥 Ya tengo el plan de ADL o Matemática: cargarlo sin regenerar</summary>
@@ -391,14 +394,15 @@ function actualizarEstadoEE(scroll = true) {
   const chipMate = document.getElementById('chip-mate');
   const sA = leerPlanLocal('ADL'), sM = leerPlanLocal('MATE');
   const tag = (s) => s ? ' · guardado ' + fechaCorta(s.guardado) : '';
-  if (planADL)  { chipADL.textContent  = '✓ ADL listo (sem. ' + (planADL.meta.semana||'?') + ')' + tag(sA) + '  ✕'; chipADL.className  = 'ee-chip ready'; }
+  if (planADL)  { chipADL.textContent  = '✓ ADL listo (sem. ' + (planADL.meta.semana||'?') + ')' + tag(sA); chipADL.className  = 'ee-chip ready'; }
   else          { chipADL.textContent  = '⏳ ADL pendiente'; chipADL.className = 'ee-chip pending'; }
-  if (planMate) { chipMate.textContent = '✓ Matemática lista (sem. ' + (planMate.meta.semana||'?') + ')' + tag(sM) + '  ✕'; chipMate.className = 'ee-chip ready'; }
+  if (planMate) { chipMate.textContent = '✓ Matemática lista (sem. ' + (planMate.meta.semana||'?') + ')' + tag(sM); chipMate.className = 'ee-chip ready'; }
   else          { chipMate.textContent = '⏳ Matemática pendiente'; chipMate.className = 'ee-chip pending'; }
   chipADL.style.cursor = chipMate.style.cursor = 'pointer';
-  chipADL.title = chipMate.title = 'Clic para borrar el plan guardado';
-  chipADL.onclick  = () => { if (planADL  && confirm('¿Borrar el plan de ADL guardado?'))        borrarPlanLocal('ADL'); };
-  chipMate.onclick = () => { if (planMate && confirm('¿Borrar el plan de Matemática guardado?')) borrarPlanLocal('MATE'); };
+  chipADL.title = chipMate.title = 'Clic para ver el plan guardado';
+  chipADL.onclick  = () => verPlanGuardado('ADL');
+  chipMate.onclick = () => verPlanGuardado('MATE');
+  pintarPlanesGuardados();
   const listo = planADL && planMate;
   document.getElementById('ee-section').style.display = listo ? 'block' : 'none';
   document.getElementById('ee-banner').style.display = listo ? 'none' : 'block';
@@ -430,12 +434,40 @@ function cargarPlanExistente() {
   st.className = 'status-msg';
 }
 
+function verPlanGuardado(clave) {
+  const plan = clave === 'ADL' ? planADL : planMate;
+  if (!plan) return;
+  planActual = plan;
+  document.getElementById('output-section').style.display = 'block';
+  renderPlan(plan);
+  document.getElementById('output-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function pintarPlanesGuardados() {
+  const cont = document.getElementById('planes-guardados');
+  const items = [['ADL', planADL, 'ADL'], ['MATE', planMate, 'Matemática']].filter(x => x[1]);
+  if (!items.length) { cont.style.display = 'none'; cont.innerHTML = ''; return; }
+  cont.style.display = 'block';
+  cont.innerHTML = '<b>Planes guardados:</b> ' + items.map(([k, pl, nom]) =>
+    `<span style="margin-right:14px;">${nom} sem. ${pl.meta.semana||'?'} — ` +
+    `<a href="#" onclick="verPlanGuardado('${k}');return false;">ver / descargar Word</a> · ` +
+    `<a href="#" style="color:#c0392b" onclick="if(confirm('¿Borrar el plan de ${nom} guardado?'))borrarPlanLocal('${k}');return false;">borrar</a></span>`
+  ).join('');
+}
+
 // Restaurar lo guardado al abrir la página
 (function restaurarPlanes() {
   const a = leerPlanLocal('ADL'), m = leerPlanLocal('MATE');
   if (a && a.plan) planADL = a.plan;
   if (m && m.plan) planMate = m.plan;
   actualizarEstadoEE(false);
+  // Mostrar en pantalla el plan guardado más reciente
+  const rec = [a, m].filter(x => x && x.plan).sort((x, y) => (y.guardado || '').localeCompare(x.guardado || ''))[0];
+  if (rec) {
+    planActual = rec.plan;
+    document.getElementById('output-section').style.display = 'block';
+    renderPlan(rec.plan);
+  }
 })();
 
 // ─── Systems ──────────────────────────────────────────────────

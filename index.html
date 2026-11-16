@@ -71,6 +71,7 @@ textarea { resize: vertical; min-height: 64px; }
 .ee-chip.pending { background: var(--bg); border-color: var(--border); color: var(--text-muted); }
 @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } .field.full { grid-column: 1; } .header-inner { flex-direction: column; } }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
 <div class="page">
@@ -101,7 +102,12 @@ textarea { resize: vertical; min-height: 64px; }
     <!-- Cargar plan existente (para la Hoja EE sin regenerar) -->
     <details class="card" id="cargar-plan" style="margin-bottom:1.5rem;">
       <summary style="cursor:pointer;font-size:14px;font-weight:600;">📥 Ya tengo el plan de ADL o Matemática: cargarlo sin regenerar</summary>
-      <p style="font-size:13px;color:var(--text-muted);margin:10px 0;">Pega los objetivos de cada día, uno por línea, con el formato <b>lunes: objetivos…</b>. Así la Hoja EE no depende de que vuelvas a generar el plan (no gasta crédito).</p>
+      <div class="field" style="margin:10px 0 14px;padding:12px;border:1px dashed var(--border);border-radius:8px;">
+        <label>Opción rápida: leer el Word del plan (.docx)</label>
+        <input type="file" id="cp-word" accept=".docx" multiple onchange="cargarDesdeWord(this)"/>
+        <p style="font-size:12px;color:var(--text-muted);margin-top:6px;">Elige el Word de ADL y/o el de Matemática que descargaste de esta app (puedes elegir los dos a la vez). Se leen en tu computadora, no se envían a la IA ni gastan crédito.</p>
+      </div>
+      <p style="font-size:13px;color:var(--text-muted);margin:10px 0;">O, si no tienes el Word, pega los objetivos de cada día, uno por línea, con el formato <b>lunes: objetivos…</b>. Así la Hoja EE no depende de que vuelvas a generar el plan (no gasta crédito).</p>
       <div class="field"><label>Materia</label>
         <select id="cp-materia"><option value="Adquisición de la Lengua">Adquisición de la Lengua</option><option value="Matemática">Matemática</option></select></div>
       <div class="field"><label>Semana</label><input type="text" id="cp-semana"/></div>
@@ -407,6 +413,78 @@ function actualizarEstadoEE(scroll = true) {
   document.getElementById('ee-section').style.display = listo ? 'block' : 'none';
   document.getElementById('ee-banner').style.display = listo ? 'none' : 'block';
   if (listo && scroll) document.getElementById('ee-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── Leer plan desde un Word (.docx) generado por esta app ────
+function parsearWordPlan(xml, DP) {
+  const doc = new DP().parseFromString(xml, 'text/xml');
+  const hijos = (n, nombre) => Array.from(n.childNodes).filter(c => c.nodeName === nombre);
+  const textoCelda = tc => Array.from(tc.getElementsByTagName('w:p'))
+    .map(p => Array.from(p.getElementsByTagName('w:t')).map(t => t.textContent).join('')).join('\n').trim();
+  const filasDe = t => hijos(t, 'w:tr').map(tr => hijos(tr, 'w:tc').map(textoCelda));
+  const tablas = Array.from(doc.getElementsByTagName('w:tbl')).map(filasDe);
+
+  const todoTexto = Array.from(doc.getElementsByTagName('w:p'))
+    .map(p => Array.from(p.getElementsByTagName('w:t')).map(t => t.textContent).join('')).join('\n');
+  const meta = { semana: '', fecha: '', materia: '', tema: '', unidad: '', transversales: [], generadores: [] };
+  const ms = todoTexto.match(/Semana\s+(\d+)/i);
+  if (ms) meta.semana = ms[1];
+
+  const MAPA = { 'estándares':'estandares', 'expectativas':'expectativas', 'objetivos':'objetivos', 'inicio':'inicio',
+    'desarrollo':'desarrollo', 'cierre':'cierre', 'evidencia de avalúo':'avaluo', 'proyecto innovador':'proyecto',
+    'acomodos ed. especial':'acomodos', 'enseñanza diferenciada':'diferenciada', 'integración con':'integracion',
+    'materiales':'materiales', 'reflexión de la praxis':'reflexion' };
+  const esDia = s => /^(lunes|martes|mi[eé]rcoles|jueves|viernes)$/i.test((s || '').trim());
+  let dias = [];
+
+  for (const filas of tablas) {
+    for (const fila of filas) for (const celda of fila) {
+      const m = celda.match(/^(Fecha|Materia|Tema|Unidad):\s*([\s\S]*)$/i);
+      if (m) meta[m[1].toLowerCase()] = m[2].trim();
+    }
+    if (filas.length >= 2 && /^temas transversales/i.test(filas[0][0] || '')) {
+      const lim = s => (s || '').split('\n').map(x => x.replace(/^[☒☐]\s*/, '').trim()).filter(Boolean);
+      meta.transversales = lim(filas[1][0]); meta.generadores = lim(filas[1][1]);
+    }
+    const iCab = filas.findIndex(f => f.length > 1 && f.slice(1).every(esDia));
+    if (iCab >= 0 && !dias.length) {
+      dias = filas[iCab].slice(1).map(d => ({ dia: d.trim().toLowerCase() }));
+      for (const fila of filas.slice(iCab + 1)) {
+        const clave = MAPA[(fila[0] || '').trim().toLowerCase()];
+        if (!clave) continue;
+        dias.forEach((d, i) => { d[clave] = fila[i + 1] || ''; });
+      }
+    }
+  }
+  if (!dias.length) throw new Error('No encontré la tabla de días en este Word.');
+  return { meta, dias };
+}
+
+async function cargarDesdeWord(input) {
+  const st = document.getElementById('cp-status');
+  const archivos = Array.from(input.files || []);
+  if (!archivos.length) return;
+  if (typeof JSZip === 'undefined') { st.textContent = 'No se cargó el lector de Word (JSZip). Recarga la página con Ctrl+F5.'; st.className = 'status-msg error'; return; }
+  const msgs = [];
+  for (const f of archivos) {
+    try {
+      const zip = await JSZip.loadAsync(f);
+      const xml = await zip.file('word/document.xml').async('string');
+      const plan = parsearWordPlan(xml, DOMParser);
+      const mat = (plan.meta.materia || '').toLowerCase();
+      let clave = null;
+      if (/matem/.test(mat)) clave = 'MATE';
+      else if (/lengua|espa[nñ]ol|adl/.test(mat)) clave = 'ADL';
+      if (!clave) { msgs.push('⚠ ' + f.name + ': materia "' + (plan.meta.materia || '?') + '" no se usa en la Hoja EE (solo ADL y Matemática).'); continue; }
+      if (clave === 'ADL') planADL = plan; else planMate = plan;
+      const ok = guardarPlanLocal(clave, plan);
+      msgs.push('✓ ' + f.name + ' → ' + plan.meta.materia + ', semana ' + (plan.meta.semana || '?') + ', ' + plan.dias.length + ' días' + (ok ? ' (guardado)' : ' (no se pudo guardar en el navegador)'));
+    } catch (e) { msgs.push('✗ ' + f.name + ': ' + e.message); }
+  }
+  input.value = '';
+  actualizarEstadoEE();
+  st.innerHTML = msgs.map(m => m.replace(/</g, '&lt;')).join('<br>');
+  st.className = 'status-msg';
 }
 
 function cargarPlanExistente() {
